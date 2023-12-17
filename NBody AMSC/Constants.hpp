@@ -1,11 +1,3 @@
-/*
-ATTENZIONE!!!
-Il seguente header serve a definire le costanti del problema e deve essere ancora implementato in una maniera coerente 
-per poter essere utilizzato intelligentemente nel programma
-
-(Generato da CHAT-GPT!!!)
-*/
-
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
@@ -14,7 +6,17 @@ const unsigned int dim=3;
 
 //Costante Gravitazionale Universale G
 
-//Delta temporale
 
+//Delta temporale espresso in secondi
+const double dt=1;
+        
+//Tempo totale della simulazione espresso in secondi
+const double totalTime = 10;
+
+//Numeri di cicli
+const int cycles = static_cast<int>(std::floor(totalTime/dt));
+
+//Numero di particelle generate
+const int numberOfParticles = 100;  
 
 #endif  // CONSTANTS_H
