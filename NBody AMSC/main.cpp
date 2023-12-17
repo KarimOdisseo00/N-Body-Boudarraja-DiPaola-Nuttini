@@ -5,9 +5,8 @@
 
 
 int main(){
-    double dt=100.0;
     
-    simulationfunctions::executeSim();
+    simulationfunctions::doSim();
     return 0;
 }
 
