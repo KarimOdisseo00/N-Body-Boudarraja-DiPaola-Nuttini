@@ -5,6 +5,7 @@
 const unsigned int dim=3;
 
 //Costante Gravitazionale Universale G
+const double G = -6.673;
 
 
 //Delta temporale espresso in secondi
