@@ -1,6 +1,3 @@
-// File adibito alla gestione delle funzioni usate globalmente per fare la simulazione. 
-// possiamo già identificare un metodo utile per far proseguire la simulazione dove specifica ciò che accade per ogni timestep
-
 #ifndef PARTICLE_UTIL_HPP
 #define PARTICLE_UTIL_HPP
 
@@ -11,6 +8,8 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <chrono>
+
 
 
 class simulationfunctions{
@@ -20,11 +19,8 @@ public:
     // Metodo statico per generare una collezione di oggetti Particle
     static std::vector<Particle<dim>> generateParticles() {
         std::vector<Particle<dim>> particles;
-        //PER DEBUGGING
-        /*particles.push_back(Particle<dim>(1, Arrows<dim>({1.0, 2.0, 3.0}), Arrows<dim>({0.0, 0.0, 0.0}), Arrows<dim>({0.0,0.0,0.0}), Arrows<dim>({0.0,0.0,0.0}), 5.0));
-        particles.push_back(Particle<dim>(2, Arrows<dim>({3.0, 2.0, 1.0}), Arrows<dim>({0.0, 0.0, 0.0}), Arrows<dim>({0.0,0.0,0.0}), Arrows<dim>({0.0,0.0,0.0}), 7.0));
-        particles.push_back(Particle<dim>(3, Arrows<dim>({4.0, 5.0, 6.0}), Arrows<dim>({0.0, 0.0, 0.0}), Arrows<dim>({0.0,0.0,0.0}), Arrows<dim>({0.0,0.0,0.0}), 10.0));
-        particles.push_back(Particle<dim>(4, Arrows<dim>({6.0, 5.0, 4.0}), Arrows<dim>({0.0, 0.0, 0.0}), Arrows<dim>({0.0,0.0,0.0}), Arrows<dim>({0.0,0.0,0.0}), 1.0));*/
+        particles.reserve(numberOfParticles);
+        
         // Metodo che genera un numero prefissato di particelle di dimensione DIM con valori casuali
         std::random_device rd;
         std::mt19937 gen(rd());
@@ -58,29 +54,32 @@ public:
     static void doSim(){
         
         std::vector<Particle<dim>> particles = std::vector<Particle<dim>>();
+        particles.reserve(numberOfParticles);
+             double local_totalTime = totalTime;
+
         std::vector<double> positions = std::vector<double>();
+        positions.reserve(numberOfParticles);
 
         particles = generateParticles();
         for(Particle particle : particles){
             particle.setToZero();
-            particle.print();
-            std::cout<<" "<<std::endl;
+           
         }
+        
+        /*
+        ciclo for utilizzato per eseguire la simulazione step by step come stabilito in base al numero di cicli */
 
-        
-        
         for(unsigned int i=0 ; i<cycles; i++){
-            std::cout<<"!!!! INIZIO DELLA SIMULAZIONE !!!!"<<std::endl;
-            std::cout<<" "<<std::endl;
-            std::cout<<"CICLO "<< i << ":" << std::endl;
-            std::cout<<" "<<std::endl;
-            
-            stepSim(particles,positions);
-            updateSim(particles);
+          
+         stepSim(particles,positions);
+           
         }
-        writePositionToTXT(positions);
+               
+        writePositionToTXT(positions);                            
+                                           
     
     }
+ 
     
     //Salvataggio delle posizioni su una vector. utile per generare il file txt che dovrà essere letto per l'animazione grafica
     static void memPos(const std::vector<Particle<dim>> particles, std::vector<double>& positions){
@@ -93,46 +92,34 @@ public:
 
     //Algoritmo Base
     static void stepSim(std::vector<Particle<dim>>& particles,std::vector<double>& positions){  
-        memPos(particles,positions);//Riempi le posizioni a ciclo
-        for(unsigned int i = 0; i<particles.size(); ++i){
-            Arrows<dim> temp = Arrows<dim>();
-            for(unsigned int j=0; j<particles.size(); ++j){
-                if(i==j){continue;}
-                temp += particles[i].calcCoefficients(particles[j]);
-            }
-            particles[i].coefficientsSetter(temp);
-            particles[i].calcAccelleration();
-        }
+                memPos(particles,positions);//Riempi le posizioni a ciclo                    
+                    for(unsigned int i = 0; i<particles.size(); ++i){
+                    bool collision = false;
+                    Arrows<dim> temp = Arrows<dim>();
+                        for(unsigned int j=0; j<particles.size(); ++j){
+                        if(i==j){continue;}
+                        temp += particles[i].calcCoefficients(particles[j]);
+                        if(particles[i].collision(particles[j])){collision=true;}
+                        }
+                        particles[i].coefficientsSetter(temp);
+                        if(collision){
+                            particles[i].calcAccelleration();
+                        }
+                        else
+                        {
+                            particles[i].calcAccellerationAfterCollision();
+                        }
+                        
+                    }
+        //copia per provare a ridure l'overhead
+        for(Particle<dim>& particle : particles){
+            particle.updateVelocity(dt);
+            particle.updatePosition(dt);
+            particle.setToZero();
+        }//fine copia
     } 
 
-    //Algoritmo ridotto
-    static void reducedSim(std::vector<Particle<dim>>& particles){
-        unsigned int middleIndex = particles.size() / 2;
-        for(unsigned int i = 0; i < middleIndex; ++i){
-            Arrows<dim> temp = Arrows<dim>();
-            Arrows<dim> temp2 = Arrows<dim>();
-            for(unsigned int j = i + 1; j < particles.size(); ++j){
-                temp += particles[i].calcCoefficients(particles[j]);
-                particles[i].coefficientsSetter(temp);
-                temp2 = particles[j].getCoefficients() - particles[i].calcCoefficients(particles[j]);
-                particles[j].coefficientsSetter(temp2);
-            }
-            particles[i].calcAccelleration();
-            particles[particles.size()-i-1].calcAccelleration();
-        }
-    }
- 
-        
-    static void updateSim(std::vector<Particle<dim>>& particles){ 
-        double local_dt = dt;
-        for(Particle<dim>& particle : particles){
-            particle.updateVelocity(local_dt);
-            particle.updatePosition(local_dt);
-            particle.print();
-            std::cout<<" "<<std::endl;
-            particle.setToZero();
-        }
-    } 
+  
     
    
     void solveCollisions(std::vector<Particle<dim>> particles){
@@ -194,5 +181,3 @@ public:
 };
 
 #endif // PARTICLE_UTIL_HPP
-
-
